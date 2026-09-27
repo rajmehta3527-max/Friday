@@ -19,4 +19,4 @@ def chat(message, history):
     res = client.chat.completions.create(model="openai/gpt-oss-20b", messages=msgs)
     return res.choices[0].message.content
 
-gr.ChatInterface(fn=chat, title="FRIDAY by Raj").launch()
+gr.ChatInterface(fn=chat, title="FRIDAY by Raj").launch(server_name="0,0,0,0", server_port=int(os,environ.get("PORT" 7860)))
