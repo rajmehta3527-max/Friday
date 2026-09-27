@@ -11,7 +11,7 @@ def chat(message, history):
     msgs = [{"role": "system", "content": "You are FRIDAY made by Raj Mehta"}]
     for h in history:
         if isinstance(h, dict):
-            msgs.append(h)
+            msgs.append({"role": h["role"], "content": h["content"]})
         else:
             msgs.append({"role": "user", "content": h[0]})
             msgs.append({"role": "assistant", "content": h[1]})
