@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from fpdf import FPDF
-import os, uuid, requests
+import os, uuid, requests, re
 
 app = Flask(__name__)
 os.makedirs("static", exist_ok=True)
@@ -14,22 +14,22 @@ HTML_PAGE = """
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#F6F3EE;color:#1A1A1A;font-family:'Inter',sans-serif}
-.header{padding:16px 20px;background:#FFFFFF;border-bottom:1px solid #E8E2D9;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:20}
-.header h2{margin:0;font-family:'Libre Baskerville',serif;font-size:18px}
-.header span{font-size:11px;border:1px solid #E8E2D9;padding:4px 10px;border-radius:100px;color:#8C857B}
-#chatBox{height:calc(100vh - 155px);overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
-.msg{max-width:82%;padding:14px 16px;border-radius:14px;line-height:1.65;font-size:14.5px;white-space:pre-wrap}
+body{margin:0;background:#F6F3EE;color:#1A1A1A;font-family:'Inter',sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.header{padding:14px 20px;background:#FFFFFF;border-bottom:1px solid #E8E2D9;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.header h2{margin:0;font-family:'Libre Baskerville',serif;font-size:17px}
+.header span{font-size:10px;border:1px solid #E8E2D9;padding:4px 10px;border-radius:100px;color:#8C857B}
+#chatBox{flex:1;overflow-y:auto;padding:20px 20px 20px 20px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth}
+.msg{max-width:85%;padding:14px 16px;border-radius:14px;line-height:1.7;font-size:14px;word-wrap:break-word;overflow-wrap:break-word}
 .user{align-self:flex-end;background:#1A1A1A;color:#F6F3EE;border-bottom-right-radius:4px}
-.bot{align-self:flex-start;background:#FFFFFF;border:1px solid #E8E2D9;border-bottom-left-radius:4px;font-family:'Libre Baskerville',serif;color:#2B2B2B;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
-.bot img{max-width:300px;max-height:42vh;object-fit:contain;border-radius:10px;margin-top:10px;cursor:zoom-in;display:block;border:1px solid #E8E2D9}
+.bot{align-self:flex-start;background:#FFFFFF;border:1px solid #E8E2D9;border-bottom-left-radius:4px;font-family:'Libre Baskerville',serif;color:#2B2B2B;box-shadow:0 1px 3px rgba(0,0,0,0.04);white-space:pre-wrap}
+.bot img{max-width:300px;max-height:40vh;object-fit:contain;border-radius:10px;margin-top:10px;cursor:zoom-in;display:block;border:1px solid #E8E2D9}
 .bot video{max-width:300px;border-radius:10px;margin-top:10px}
-.footer{padding:12px 16px;background:#FFFFFF;border-top:1px solid #E8E2D9;position:fixed;bottom:0;width:100%;z-index:20}
+.footer{padding:12px 16px;background:#FFFFFF;border-top:1px solid #E8E2D9;flex-shrink:0}
 .input-row{display:flex;gap:8px}
 #userInput{flex:1;background:#F6F3EE;border:1px solid #E8E2D9;padding:12px 16px;border-radius:100px;outline:none;font-family:'Inter',sans-serif}
-.btn{border:1px solid #E8E2D9;background:#FFF;color:#1A1A1A;padding:9px 14px;border-radius:100px;font-weight:500;cursor:pointer;font-size:13px}
+.btn{border:1px solid #E8E2D9;background:#FFF;color:#1A1A1A;padding:8px 14px;border-radius:100px;font-weight:500;cursor:pointer;font-size:13px}
 .btn-primary{background:#1A1A1A;color:#FFF;border-color:#1A1A1A}
-.actions{display:flex;gap:6px;margin-top:10px}
+.actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 a.dl{display:inline-block;margin-top:10px;background:#1A1A1A;color:#fff;padding:7px 14px;border-radius:100px;text-decoration:none;font-size:12px}
 .credit{text-align:center;font-size:11px;color:#8C857B;margin-top:10px}
 .credit b{color:#1A1A1A} .credit a{color:#1A1A1A;text-decoration:underline;font-weight:600}
@@ -40,7 +40,7 @@ a.dl{display:inline-block;margin-top:10px;background:#1A1A1A;color:#fff;padding:
 </head>
 <body>
 <div class="header"><h2>FRIDAY — AI STUDIO</h2><span>MADE BY RAJ MEHTA</span></div>
-<div id="chatBox"><div class="msg bot">Hello, I am Friday — Your personal AI assistant.\n\nI can do everything:\n• Answer any question\n• Write essays, code, captions\n• Generate Images\n• Generate Videos\n• Make PDFs\n\nJust type and press Send. For image, type prompt and press Image button.</div></div>
+<div id="chatBox"><div class="msg bot">Hello, I am Friday — Your personal AI.\n\n• Ask anything\n• Generate Images & Videos\n• Make PDFs\n\nTry: "What is Free Fire?"</div></div>
 <div id="imgModal" onclick="this.style.display='none'"><span>×</span><img id="modalImg"></div>
 <div class="footer">
 <div class="input-row"><input id="userInput" placeholder="Ask anything or write image prompt..."><button class="btn btn-primary" onclick="sendMessage()">Send</button></div>
@@ -50,14 +50,17 @@ a.dl{display:inline-block;margin-top:10px;background:#1A1A1A;color:#fff;padding:
 <button class="btn" onclick="generateVideo()">🎬 Video</button>
 <button class="btn" onclick="generateDoc()">📄 PDF</button>
 </div>
-<div class="credit">Made with ❤️ by <b>Raj Mehta</b> (Age 18) | Instagram: <a href="https://instagram.com/rajmehta_087" target="_blank">@rajmehta_087</a></div>
+<div class="credit">Made with ❤️ by <b>Raj Mehta</b> (18) | Insta: <a href="https://instagram.com/rajmehta_087" target="_blank">@rajmehta_087</a></div>
 </div>
 <script>
 const chatBox = document.getElementById('chatBox');
+function scrollToBottom(){ chatBox.scrollTop = chatBox.scrollHeight; }
 function addMsg(text, type){
   const div = document.createElement('div'); div.className='msg '+type; div.innerHTML=text;
-  const imgs = div.querySelectorAll('img'); imgs.forEach(img=>{ img.onclick=()=>{ document.getElementById('modalImg').src=img.src; document.getElementById('imgModal').style.display='flex'; } });
-  chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight; return div;
+  div.querySelectorAll('img').forEach(img=>{ img.onclick=()=>{ document.getElementById('modalImg').src=img.src; document.getElementById('imgModal').style.display='flex'; } });
+  chatBox.appendChild(div); 
+  setTimeout(scrollToBottom, 100);
+  return div;
 }
 async function sendMessage(){
     let input = document.getElementById('userInput'); let msg = input.value.trim(); if(!msg) return;
@@ -97,6 +100,12 @@ document.getElementById('userInput').addEventListener('keypress', e=>{ if(e.key=
 </html>
 """
 
+def clean_text(text):
+    text = text.replace("**", "").replace("*", "")
+    text = text.replace("|", "\n")
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
 @app.route('/')
 def home():
     return HTML_PAGE
@@ -105,19 +114,18 @@ def home():
 def chat():
     user_msg = request.json.get('message','')
     try:
-        # AI API - answers everything
         url = f"https://text.pollinations.ai/{requests.utils.quote(user_msg)}"
-        r = requests.get(url, params={"model":"openai", "system":"You are Friday AI, made by Raj Mehta (18, insta @rajmehta_087). Answer helpfully in simple language. Keep answers concise."}, timeout=25)
-        reply = r.text.strip() if r.status_code==200 else "I'm Friday by Raj Mehta. I can help!"
+        r = requests.get(url, params={"model":"openai", "system":"You are Friday AI, made by Raj Mehta (18, insta @rajmehta_087). Answer helpfully, clean formatting, no excessive markdown. Keep concise and readable."}, timeout=25)
+        reply = clean_text(r.text) if r.status_code==200 else "I'm Friday by Raj Mehta. I can help!"
     except:
-        reply = f"Hello! I'm Friday made by Raj Mehta. You asked: {user_msg}. I can answer any question, write code, essays, and generate images/videos."
-    return jsonify({"reply": reply[:3000]})
+        reply = f"You asked: {user_msg}. I'm Friday, made by Raj Mehta, I can answer anything."
+    return jsonify({"reply": reply[:3500]})
 
 @app.route('/generate-image', methods=['POST'])
 def generate_image():
     prompt = request.json.get('prompt','')
     style = request.json.get('style','realistic')
-    full = f"{prompt}, {style}, ultra detailed, sharp, no watermark, no logo, no text, clean"
+    full = f"{prompt}, {style}, ultra detailed, sharp, no watermark, no logo, no text, clean image"
     safe = requests.utils.quote(full)
     img_url = f"https://image.pollinations.ai/prompt/{safe}?width=768&height=1024&model=flux&enhance=true&nologo=true&nofeed=true&private=true&seed={uuid.uuid4().hex[:5]}"
     return jsonify({"image_url": img_url, "final_prompt": full})
