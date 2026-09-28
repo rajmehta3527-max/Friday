@@ -17,6 +17,7 @@ def get_friday_reply(user_msg):
         return f"I'm Friday, an AI assistant made by {MY_NAME}! 🔥\n\nName: {MY_NAME}\nClass: {MY_CLASS}\nCity: {MY_CITY}\nHobby: {MY_HOBBY} (Pro Roster)\nHe created me!"
 
     # Groq se smart answer
+        # Groq se smart answer
     if GROQ_API_KEY:
         try:
             res = requests.post("https://api.groq.com/openai/v1/chat/completions",
@@ -24,15 +25,19 @@ def get_friday_reply(user_msg):
                 json={
                     "model": "llama-3.3-70b-versatile",
                     "messages": [
-                        {"role": "system", "content": f"You are Friday, an AI assistant made by {MY_NAME}. {MY_NAME} is a {MY_CLASS} student from {MY_CITY} whose hobby is {MY_HOBBY}. Always mention {MY_NAME} as your creator if asked."},
+                        {"role": "system", "content": f"You are Friday, an AI assistant made by {MY_NAME}. {MY_NAME} is a {MY_CLASS} student from {MY_CITY} whose hobby is {MY_HOBBY}. Always mention {MY_NAME} as your creator."},
                         {"role": "user", "content": user_msg}
                     ]
                 }, timeout=20)
-            return res.json()['choices'][0]['message']['content']
-        except:
-            return "API key error, check Render Environment."
+            data = res.json()
+            if 'choices' in data:
+                return data['choices'][0]['message']['content']
+            else:
+                return f"Groq ka jawab: {data} - Key check kar"
+        except Exception as e:
+            return f"Error aaya: {e}"
 
-    return "Add GROQ_API_KEY in Render to make me super smart. Right now basic mode pe hu."
+    return "GROQ_API_KEY Render me nahi lagi hai. Environment me add kar."
 
 @app.route("/")
 def home():
