@@ -15,76 +15,73 @@ HTML_PAGE = """
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *{font-family:'Outfit',sans-serif;box-sizing:border-box}
-body{margin:0;background:radial-gradient(circle at top, #1a2a5e, #0a0a0a);color:#fff;min-height:100vh;padding-bottom:80px}
-.header{padding:18px 20px;background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
-.header h2{margin:0;font-size:18px}
-.badge{background:#2a5bd7;padding:4px 10px;border-radius:20px;font-size:12px}
-#chatBox{height:60vh;overflow-y:auto;padding:15px;display:flex;flex-direction:column;gap:12px}
-.msg{max-width:85%;padding:12px 14px;border-radius:18px;line-height:1.4;font-size:14px;animation:pop.2s}
-@keyframes pop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+body{margin:0;background:radial-gradient(circle at top, #1a2a5e, #0a0a0a);color:#fff;min-height:100vh}
+.header{padding:15px 20px;background:rgba(255,255,255,0.06);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+#chatBox{height:calc(100vh - 140px);overflow-y:auto;padding:15px 15px 20px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:85%;padding:12px 14px;border-radius:18px;line-height:1.4;font-size:14px}
 .user{align-self:flex-end;background:linear-gradient(135deg,#4a7bff,#2a5bd7);border-bottom-right-radius:4px}
-.bot{align-self:flex-start;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.1);border-bottom-left-radius:4px}
-.bot img,.bot video{width:100%;border-radius:12px;margin-top:8px;border:1px solid rgba(255,255,255,0.15)}
-.footer{padding:12px;background:rgba(0,0,0,0.6);backdrop-filter:blur(12px);position:fixed;bottom:0;width:100%;border-top:1px solid rgba(255,255,255,0.1)}
+.bot{align-self:flex-start;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.1);border-bottom-left-radius:4px;width:fit-content;max-width:90%}
+.bot img{max-width:320px;max-height:45vh;object-fit:contain;border-radius:12px;margin-top:8px;cursor:zoom-in;border:1px solid rgba(255,255,255,0.2);display:block}
+.bot img:hover{transform:scale(1.02);transition:.2s}
+.bot video{max-width:320px;border-radius:12px;margin-top:8px}
+.footer{padding:12px;background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);position:fixed;bottom:0;width:100%;border-top:1px solid rgba(255,255,255,0.1);z-index:10}
 .input-row{display:flex;gap:8px}
 #userInput{flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:12px 15px;border-radius:25px;outline:none}
-#style{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;padding:8px 12px;border-radius:20px}
-.btn{border:none;padding:10px 14px;border-radius:20px;font-weight:600;cursor:pointer;background:#222;color:#fff;border:1px solid rgba(255,255,255,0.15)}
+.btn{border:none;padding:9px 13px;border-radius:20px;font-weight:600;cursor:pointer;background:#222;color:#fff;border:1px solid rgba(255,255,255,0.15);font-size:13px}
 .btn-primary{background:linear-gradient(135deg,#4a7bff,#2a5bd7);border:none}
-.actions{display:flex;gap:6px;margin-top:8px;overflow-x:auto}
+.actions{display:flex;gap:6px;margin-top:8px}
 a.dl{display:inline-block;margin-top:8px;background:#fff;color:#000;padding:6px 12px;border-radius:20px;text-decoration:none;font-size:12px;font-weight:600}
-.credit{text-align:center;font-size:11px;color:rgba(255,255,255,0.6);margin-top:8px;letter-spacing:0.5px}
-.credit b{color:#fff}
-.credit a{color:#6ea8ff;text-decoration:none;font-weight:600}
+.credit{text-align:center;font-size:11px;color:rgba(255,255,255,0.6);margin-top:8px}
+.credit b{color:#fff} .credit a{color:#6ea8ff;text-decoration:none}
+#imgModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:999;justify-content:center;align-items:center;padding:20px}
+#imgModal img{max-width:95%;max-height:90%;border-radius:12px;object-fit:contain}
+#imgModal span{position:absolute;top:15px;right:20px;font-size:30px;cursor:pointer}
 </style>
 </head>
 <body>
-<div class="header"><h2>🤖 FRIDAY AI PRO MAX</h2><span class="badge">PRO</span></div>
-<div id="chatBox"><div class="msg bot">Hey boss 👋 Bolo kya banana hai?<br><br>Try: <i>"a beautiful Indian girl using phone, sitting in cafe"</i><br><br>Tip: Real photo ke liye <b>📸 Realistic</b> select karo.</div></div>
+<div class="header"><h2>🤖 FRIDAY AI PRO MAX</h2><span style="background:#2a5bd7;padding:4px 10px;border-radius:20px;font-size:12px">PRO</span></div>
+<div id="chatBox"><div class="msg bot">Hey boss 👋 <br>Try: <i>"a girl playing with cat"</i> <br>Image pe click karke full dekho - No watermark!</div></div>
+<div id="imgModal" onclick="this.style.display='none'"><span>×</span><img id="modalImg"></div>
 <div class="footer">
-<div class="input-row">
-<input id="userInput" placeholder="Kuch bhi likho...">
-<button class="btn btn-primary" onclick="sendMessage()">➤</button>
-</div>
+<div class="input-row"><input id="userInput" placeholder="Kuch bhi likho..."><button class="btn btn-primary" onclick="sendMessage()">➤</button></div>
 <div class="actions">
-<select id="style">
-<option value="realistic">📸 Realistic</option>
-<option value="cinematic, ultra detailed portrait">🎬 Cinematic</option>
-<option value="anime">🎨 Anime</option>
-<option value="3d render">🧊 3D</option>
-<option value="logo design, vector">💎 Logo</option>
-<option value="poster art">🖼️ Poster</option>
-</select>
+<select id="style" class="btn"><option value="realistic">📸 Realistic</option><option value="cinematic">🎬 Cinematic</option><option value="anime">🎨 Anime</option><option value="3d render">🧊 3D</option><option value="logo design">💎 Logo</option></select>
 <button class="btn btn-primary" onclick="generateImage()">🖼️ Image</button>
 <button class="btn" onclick="generateVideo()">🎬 Video</button>
 <button class="btn" onclick="startListening()">🎤</button>
 <button class="btn" onclick="generateDoc()">📄 PDF</button>
 </div>
-<div class="credit">Made with ❤️ by <b>Raj Mehta</b> (Age 18) | Insta: <a href="https://instagram.com/rajmehta_087" target="_blank">@rajmehta_087</a></div>
+<div class="credit">Made with ❤️ by <b>Raj Mehta</b> (18) | Insta: <a href="https://instagram.com/rajmehta_087" target="_blank">@rajmehta_087</a></div>
 </div>
 <script>
 const chatBox = document.getElementById('chatBox');
-let lastBotReply = "";
-function addMsg(text, type){ chatBox.innerHTML += `<div class="msg ${type}">${text}</div>`; chatBox.scrollTop = chatBox.scrollHeight; }
+function addMsg(text, type){ 
+  const div = document.createElement('div'); div.className='msg '+type; div.innerHTML=text;
+  div.querySelectorAll('img').forEach(img=>{ img.onclick=()=>{ document.getElementById('modalImg').src=img.src; document.getElementById('imgModal').style.display='flex'; } });
+  chatBox.appendChild(div); chatBox.scrollTop = chatBox.scrollHeight; 
+}
 async function sendMessage(){
     let input = document.getElementById('userInput'); let msg = input.value; if(!msg) return;
     addMsg(msg, 'user'); input.value = "";
     let res = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
-    let data = await res.json(); lastBotReply = data.reply; addMsg(data.reply, 'bot');
+    let data = await res.json(); addMsg(data.reply, 'bot');
 }
 async function generateImage(){
     let prompt = document.getElementById('userInput').value; let style = document.getElementById('style').value;
-    if(!prompt) return alert("Pehle likho!"); addMsg(`🖼️ ${prompt}`, 'user'); addMsg(`⏳ Image bana raha hu...`, 'bot');
+    if(!prompt) return alert("Pehle likho!"); 
+    addMsg(prompt, 'user'); 
+    const loadingId = Date.now(); addMsg(`<span id="${loadingId}">⏳ Generating... 5 sec</span>`, 'bot');
     let res = await fetch('/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt, style})});
-    let d = await res.json(); chatBox.lastChild.remove();
-    addMsg(`${d.final_prompt}<br><img src="${d.image_url}"><br><a class="dl" href="${d.image_url}" target="_blank">⬇️ Download HD</a>`, 'bot');
+    let d = await res.json(); 
+    document.getElementById(loadingId).parentElement.remove();
+    addMsg(`${d.final_prompt}<br><img src="${d.image_url}"><br><a class="dl" href="${d.image_url}" target="_blank">⬇️ Download HD (No Watermark)</a>`, 'bot');
 }
 async function generateVideo(){
     let prompt = document.getElementById('userInput').value; let style = document.getElementById('style').value;
-    if(!prompt) return alert("Pehle kuch likho!"); addMsg(`🎬 Video: ${prompt}`, 'user'); addMsg(`⏳ Video render... 40 sec`, 'bot');
+    if(!prompt) return alert("Pehle likho!"); addMsg(prompt, 'user'); addMsg(`⏳ Video 40 sec...`, 'bot');
     let res = await fetch('/generate-video',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt, style})});
     let d = await res.json(); chatBox.lastChild.remove();
-    addMsg(`<b>${d.prompt}</b><br><video src="${d.video_url}" controls autoplay loop></video>`, 'bot');
+    addMsg(`<video src="${d.video_url}" controls autoplay loop></video>`, 'bot');
 }
 function startListening(){ const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)(); rec.lang = 'en-IN'; rec.start(); rec.onresult = e => { document.getElementById('userInput').value = e.results[0][0].transcript; } }
 async function generateDoc(){
@@ -105,39 +102,35 @@ def home():
 @app.route('/chat', methods=['POST'])
 def chat():
     msg = request.json.get('message','')
-    return jsonify({"reply": f"Samajh gaya: {msg} <br>Ab Image button dabao."})
+    return jsonify({"reply": f"Samajh gaya: {msg}. Image button dabao!"})
 
 @app.route('/generate-image', methods=['POST'])
 def generate_image():
     prompt = request.json.get('prompt','').lower()
     style = request.json.get('style','realistic')
+    
     enhanced = prompt
-    if "girl" in prompt and "phone" in prompt:
-        enhanced = f"{prompt}, beautiful girl holding smartphone in hand clearly, looking at phone screen, texting, natural light, detailed hands, 8k"
-    elif "phone" in prompt:
-        enhanced = f"{prompt}, holding smartphone clearly visible, using phone, detailed hands"
-    full_prompt = f"{enhanced}, {style}, ultra detailed, sharp focus, highly detailed, photorealistic, 8k"
+    if "girl" in prompt and "cat" in prompt:
+        enhanced = f"{prompt}, beautiful girl holding cute cat, cuddling cat, cat clearly visible"
+    elif "girl" in prompt and "phone" in prompt:
+        enhanced = f"{prompt}, holding smartphone clearly in hand, looking at screen"
+
+    # NO WATERMARK FIX
+    full_prompt = f"{enhanced}, {style}, ultra detailed, sharp focus, photorealistic, 8k, no watermark, no logo, no text, clean image"
     safe_prompt = requests.utils.quote(full_prompt)
-    image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=1280&model=flux&enhance=true&nologo=true&seed={uuid.uuid4().hex[:6]}"
+    
+    # nologo=true + nofeed=true + private=true = no watermark
+    image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=768&height=1024&model=flux&enhance=true&nologo=true&nofeed=true&private=true&seed={uuid.uuid4().hex[:6]}"
+    
     return jsonify({"image_url": image_url, "final_prompt": f"Prompt: {full_prompt}"})
 
 @app.route('/generate-video', methods=['POST'])
 def generate_video():
     prompt = request.json.get('prompt','')
     style = request.json.get('style','cinematic')
-    full_prompt = f"{prompt}, {style} video, smooth motion, 4k"
-    safe_prompt = requests.utils.quote(full_prompt)
-    video_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?model=video&nologo=true&enhance=true"
-    return jsonify({"video_url": video_url, "prompt": full_prompt})
-
-@app.route('/speak', methods=['POST'])
-def speak():
-    text = request.json.get('text','')[:600]
-    filename = f"voice_{uuid.uuid4().hex}.mp3"
-    path = os.path.join("static", filename)
-    tts = gTTS(text=text, lang='en', tld='co.in')
-    tts.save(path)
-    return jsonify({"audio_url": f"/static/{filename}"})
+    safe_prompt = requests.utils.quote(f"{prompt}, {style} video, 4k, no watermark")
+    video_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?model=video&nologo=true&nofeed=true&private=true"
+    return jsonify({"video_url": video_url, "prompt": prompt})
 
 @app.route('/generate-doc', methods=['POST'])
 def generate_doc():
