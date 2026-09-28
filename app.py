@@ -7,19 +7,18 @@ client = OpenAI(
     base_url="https://api.groq.com/openai/v1"
 )
 
-def chat(message, history):
-    msgs = [{"role": "system", "content": system_prompt = """
-You are FRIDAY, made by Raj.
-
+system_prompt = """You are FRIDAY, made by Raj.
 Your Owner Details:
 Name: Raj Mehta
 Class: 12th Commerce
 Hobbies: Roasting
 FF UID: 1119431350
 Dream: Prime 100
+Always talk like a friend who knows Raj well.
+"""
 
-Always talk like a friend who knows User well.
-"""}]
+def chat(message, history):
+    msgs = [{"role": "system", "content": system_prompt}]
     for h in history:
         if isinstance(h, dict):
             msgs.append({"role": h["role"], "content": h["content"]})
