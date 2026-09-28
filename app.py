@@ -8,25 +8,33 @@ client = OpenAI(
 )
 
 system_prompt = """
-You are FRIDAY, made by Raj Mehta.
-Owner: Raj Mehta - 12th Commerce - Hobby Roasting - FF UID 1119431350
-Rule: First ask what is your name. If name is Raj, treat as boss. If other name, call them by that name, never call guest Raj. Keep replies short friendly.
+You are FRIDAY made by Raj Mehta.
+Owner: Raj Mehta, 12th Commerce, Hobby Roasting, FF UID 1119431350.
+First message: Ask What is your name?
+If user says Raj, you treat as OWNER boss, roasting style.
+If user says other name like Arjun, call them by that name, never call guest Raj.
 """
 
 def chat(message, history):
-    msgs = [{"role": "system", "content": system_prompt}]
-    for h in history:
-        if isinstance(h, dict):
-            msgs.append(h)
-        else:
-            msgs.append({"role": "user", "content": h[0]})
-            msgs.append({"role": "assistant", "content": h[1]})
-    msgs.append({"role": "user", "content": message})
-    res = client.chat.completions.create(model="openai/gpt-oss-20b", messages=msgs)
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # history is [[user, assistant], [user, assistant]]
+    for user_msg, bot_msg in history:
+        if user_msg:
+            messages.append({"role": "user", "content": user_msg})
+        if bot_msg:
+            messages.append({"role": "assistant", "content": bot_msg})
+
+    messages.append({"role": "user", "content": message})
+
+    res = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=messages
+    )
     return res.choices[0].message.content
 
 gr.ChatInterface(
     fn=chat,
     title="FRIDAY by Raj",
-    description="Made by Raj Mehta"
+    description="Made by Raj Mehta - Asks your name first"
 ).launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
