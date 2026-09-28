@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
-import requests, re
+import requests, re, os
 from urllib.parse import quote
-import datetime
 
 app = Flask(__name__)
+
+# Key will come from Render Environment Variable
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 HTML = """
 <!DOCTYPE html>
@@ -48,46 +50,33 @@ document.getElementById('inp').addEventListener('keypress',e=>{ if(e.key==='Ente
 </html>
 """
 
-DEV_INFO = """I am FRIDAY, created by Raj Mehta.
-
-👨‍💻 Developer: Raj Mehta
-🎂 Age: 18 years old
-📸 Instagram: @rajmehta_087
-
-Raj is a young developer from India who built me as his personal AI assistant."""
+DEV_INFO = "I am FRIDAY, created by Raj Mehta.\n\n👨‍💻 Developer: Raj Mehta\n🎂 Age: 18 years old\n📸 Instagram: @rajmehta_087"
 
 def is_about_dev(q):
-    q=q.lower()
-    keys=["who made you","who created you","your developer","your dev","about dev","about developer","who is raj","who is raj mehta","your name","your owner","kisne banaya","tumhe kisne banaya","your creator","who are you"]
-    return any(k in q for k in keys)
+    return any(k in q.lower() for k in ["who made you","who created you","your developer","about dev","who is raj","kisne banaya","your creator","who are you","your name"])
 
 def get_weather(city):
     try:
-        # Free weather API - no key needed
-        r = requests.get(f"https://wttr.in/{quote(city)}?format=j1", timeout=8)
+        r = requests.get(f"https://wttr.in/{quote(city)}?format=j1", timeout=6)
         if r.status_code==200:
-            data = r.json()
-            curr = data['current_condition'][0]
-            temp = curr['temp_C']
-            desc = curr['weatherDesc'][0]['value']
-            humidity = curr['humidity']
-            wind = curr['windspeedKmph']
-            return f"Weather in {city.title()} right now:\n🌡️ Temp: {temp}°C\n☁️ Condition: {desc}\n💧 Humidity: {humidity}%\n💨 Wind: {wind} km/h\n\nData from wttr.in - Live"
-    except:
-        pass
+            c = r.json()['current_condition'][0]
+            return f"Weather in {city.title()}:\n🌡️ Temp: {c['temp_C']}°C\n☁️ {c['weatherDesc'][0]['value']}\n💧 Humidity: {c['humidity']}%\n💨 Wind: {c['windspeedKmph']} km/h\nLive"
+    except: pass
     return None
 
-def get_ai_answer(msg):
-    # Try 3 models quickly
-    for model in ["openai", "mistral", "openai-fast"]:
-        try:
-            r = requests.get(f"https://text.pollinations.ai/{quote(msg)}?model={model}",
-                              headers={"User-Agent":"Mozilla/5.0"}, timeout=12)
-            if r.status_code==200 and len(r.text)>30:
-                if "overloaded" not in r.text.lower() and "busy" not in r.text.lower():
-                    return r.text
-        except:
-            continue
+def get_gemini(prompt):
+    if not GEMINI_API_KEY:
+        return None
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        payload = {"contents": [{"parts": [{"text": f"You are FRIDAY, made by Raj Mehta (18, @rajmehta_087). Answer clearly, short, helpful for Indian students: {prompt}"}]}]}
+        r = requests.post(url, json=payload, timeout=20)
+        if r.status_code==200:
+            return r.json()['candidates'][0]['content']['parts'][0]['text']
+        else:
+            print("Gemini Error:", r.text)
+    except Exception as e:
+        print(e)
     return None
 
 @app.route('/')
@@ -96,32 +85,22 @@ def home(): return HTML
 @app.route('/chat', methods=['POST'])
 def chat():
     m = request.json.get('message','').strip()
-    if not m:
-        return jsonify({"reply": "Ask something..."})
+    if not m: return jsonify({"reply":"Ask something..."})
 
-    # 1. Dev info - instant
     if is_about_dev(m):
         return jsonify({"reply": DEV_INFO})
 
-    # 2. Weather - real API
     if "weather" in m.lower():
-        city = m.lower().replace("weather of","").replace("weather in","").replace("weather","").strip()
-        if not city: city = "rishikesh"
+        city = m.lower().replace("weather of","").replace("weather in","").replace("weather","").strip() or "rishikesh"
         w = get_weather(city)
-        if w:
-            return jsonify({"reply": w})
-        # if weather api fails, continue to AI
+        if w: return jsonify({"reply": w})
 
-    # 3. Normal AI
-    ans = get_ai_answer(m)
+    ans = get_gemini(m)
 
     if not ans:
-        # NO MORE "server delay" MESSAGE - give helpful answer instead
-        ans = f"Here's what I know about '{m}': This is a great question! Rishikesh is currently around 24-30°C in late September, pleasant weather for visiting. For exact live temp, search 'Rishikesh weather' on Google.\n\nI'm FRIDAY by Raj Mehta (@rajmehta_087), built to answer fast even when main server is slow."
+        ans = "Gemini API key not set or failed. Please add GEMINI_API_KEY in Render Environment and redeploy. Without key I can't answer properly."
 
-    ans = re.sub(r'\*\*','',ans)
-    return jsonify({"reply": ans[:4000]})
+    return jsonify({"reply": re.sub(r'\*\*','',ans)[:4000]})
 
 if __name__ == '__main__':
-    import os
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT",5000)))
