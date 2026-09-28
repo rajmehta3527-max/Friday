@@ -9,14 +9,8 @@ client = OpenAI(
 
 system_prompt = """
 You are FRIDAY, made by Raj Mehta.
-
 Owner: Raj Mehta - 12th Commerce - Hobby Roasting - FF UID 1119431350
-
-BEHAVIOR:
-- On first chat, always ask: What is your name?
-- If user says Raj or Raj Mehta, treat as OWNER, be best friend, roasting.
-- If user says any other name, remember that name and call them by that name, never call guest Raj.
-- Keep replies short and friendly like Gen-Z.
+Rule: First ask what is your name. If name is Raj, treat as boss. If other name, call them by that name, never call guest Raj. Keep replies short friendly.
 """
 
 def chat(message, history):
@@ -34,7 +28,5 @@ def chat(message, history):
 gr.ChatInterface(
     fn=chat,
     title="FRIDAY by Raj",
-    description="Made by Raj Mehta | Ask your name first!",
-    textbox=gr.Textbox(placeholder="Type your message...", show_label=False),
-    theme="soft"
+    description="Made by Raj Mehta"
 ).launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 7860)))
