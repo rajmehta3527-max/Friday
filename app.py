@@ -36,6 +36,6 @@ with gr.Blocks(title="FRIDAY AI") as demo:
 
     msg.submit(respond, [msg, chatbot], [msg, chatbot])
     clear.click(lambda: (None, []), None, [msg, chatbot], queue=False)
-
 if __name__ == "__main__":
-    demo.launch()
+    import os
+    demo.launch(server_name="0.0.0.0", server_port=int(os.environ.get("PORT", 10000)))
