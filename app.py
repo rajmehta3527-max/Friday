@@ -4,8 +4,8 @@ from urllib.parse import quote
 
 app = Flask(__name__)
 
-# Key will come from Render Environment Variable
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+# Gemini key Render ke Environment se aayega
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 HTML = """
 <!DOCTYPE html>
@@ -15,9 +15,11 @@ HTML = """
 <title>FRIDAY - by Raj Mehta</title>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box} body{margin:0;background:#F6F3EE;color:#1A1A1A;font-family:'Inter',sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+*{box-sizing:border-box}
+body{margin:0;background:#F6F3EE;color:#1A1A1A;font-family:'Inter',sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 .header{padding:14px 20px;background:#fff;border-bottom:1px solid #E8E2D9;display:flex;justify-content:space-between;align-items:center}
-.header h2{margin:0;font-family:'Libre Baskerville',serif;font-size:16px}.header span{font-size:10px;border:1px solid #E8E2D9;padding:4px 10px;border-radius:100px;color:#8C857B}
+.header h2{margin:0;font-family:'Libre Baskerville',serif;font-size:16px}
+.header span{font-size:10px;border:1px solid #E8E2D9;padding:4px 10px;border-radius:100px;color:#8C857B}
 #chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
 .msg{max-width:85%;padding:12px 16px;border-radius:14px;line-height:1.7;font-size:14px;white-space:pre-wrap;word-wrap:break-word}
 .user{align-self:flex-end;background:#1A1A1A;color:#fff;border-bottom-right-radius:4px}
@@ -50,57 +52,99 @@ document.getElementById('inp').addEventListener('keypress',e=>{ if(e.key==='Ente
 </html>
 """
 
-DEV_INFO = "I am FRIDAY, created by Raj Mehta.\n\n👨‍💻 Developer: Raj Mehta\n🎂 Age: 18 years old\n📸 Instagram: @rajmehta_087"
+DEV_INFO = """I am FRIDAY, created by Raj Mehta.
+
+👨‍💻 Developer: Raj Mehta
+🎂 Age: 18 years old
+📸 Instagram: @rajmehta_087
+
+Raj is a young developer from India who built me as his personal AI assistant. He loves coding, AI, and building cool projects."""
 
 def is_about_dev(q):
-    return any(k in q.lower() for k in ["who made you","who created you","your developer","about dev","who is raj","kisne banaya","your creator","who are you","your name"])
+    q = q.lower()
+    keys = ["who made you", "who created you", "your developer", "your dev", "about dev", "about developer", "who is raj", "who is raj mehta", "your name", "your owner", "kisne banaya", "tumhe kisne banaya", "your creator", "who are you"]
+    return any(k in q for k in keys)
 
 def get_weather(city):
     try:
-        r = requests.get(f"https://wttr.in/{quote(city)}?format=j1", timeout=6)
-        if r.status_code==200:
-            c = r.json()['current_condition'][0]
-            return f"Weather in {city.title()}:\n🌡️ Temp: {c['temp_C']}°C\n☁️ {c['weatherDesc'][0]['value']}\n💧 Humidity: {c['humidity']}%\n💨 Wind: {c['windspeedKmph']} km/h\nLive"
-    except: pass
+        r = requests.get(f"https://wttr.in/{quote(city)}?format=j1", timeout=7)
+        if r.status_code == 200:
+            curr = r.json()['current_condition'][0]
+            temp = curr['temp_C']
+            desc = curr['weatherDesc'][0]['value']
+            humidity = curr['humidity']
+            wind = curr['windspeedKmph']
+            return f"Weather in {city.title()} right now:\n🌡️ Temp: {temp}°C\n☁️ Condition: {desc}\n💧 Humidity: {humidity}%\n💨 Wind: {wind} km/h\n\nLive data"
+    except:
+        pass
     return None
 
-def get_gemini(prompt):
+def get_gemini_answer(prompt):
     if not GEMINI_API_KEY:
         return None
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        payload = {"contents": [{"parts": [{"text": f"You are FRIDAY, made by Raj Mehta (18, @rajmehta_087). Answer clearly, short, helpful for Indian students: {prompt}"}]}]}
-        r = requests.post(url, json=payload, timeout=20)
-        if r.status_code==200:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        data = {
+            "contents": [{
+                "parts": [{"text": f"You are FRIDAY, created by Raj Mehta (18, Instagram @rajmehta_087). Be helpful, short, friendly. Answer this: {prompt}"}]
+            }]
+        }
+        r = requests.post(url, json=data, timeout=25)
+        if r.status_code == 200:
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         else:
             print("Gemini Error:", r.text)
+            return None
     except Exception as e:
-        print(e)
+        print("Exception:", e)
+        return None
+
+def get_pollinations_fallback(msg):
+    try:
+        r = requests.get(f"https://text.pollinations.ai/{quote(msg)}?model=openai", timeout=10)
+        if r.status_code == 200 and len(r.text) > 20:
+            return r.text
+    except:
+        pass
     return None
 
 @app.route('/')
-def home(): return HTML
+def home():
+    return HTML
 
 @app.route('/chat', methods=['POST'])
-def chat():
-    m = request.json.get('message','').strip()
-    if not m: return jsonify({"reply":"Ask something..."})
+def chat_api():
+    m = request.json.get('message', '').strip()
+    if not m:
+        return jsonify({"reply": "Ask something..."})
 
+    # 1. Dev info - instant
     if is_about_dev(m):
         return jsonify({"reply": DEV_INFO})
 
+    # 2. Weather - real data
     if "weather" in m.lower():
-        city = m.lower().replace("weather of","").replace("weather in","").replace("weather","").strip() or "rishikesh"
+        city = m.lower().replace("weather of","").replace("weather in","").replace("weather","").strip()
+        if not city:
+            city = "rishikesh"
         w = get_weather(city)
-        if w: return jsonify({"reply": w})
+        if w:
+            return jsonify({"reply": w})
 
-    ans = get_gemini(m)
+    # 3. Real AI - Gemini
+    ans = get_gemini_answer(m)
 
+    # 4. Fallback if Gemini fails
     if not ans:
-        ans = "Gemini API key not set or failed. Please add GEMINI_API_KEY in Render Environment and redeploy. Without key I can't answer properly."
+        ans = get_pollinations_fallback(m)
 
-    return jsonify({"reply": re.sub(r'\*\*','',ans)[:4000]})
+    # 5. Final fallback
+    if not ans:
+        ans = "I'm FRIDAY by Raj Mehta. Gemini key is not working. Please check in Render Environment that GEMINI_API_KEY is set correctly and redeploy with Clear Cache."
+
+    ans = re.sub(r'\*\*', '', ans)
+    return jsonify({"reply": ans[:4000]})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT",5000)))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
