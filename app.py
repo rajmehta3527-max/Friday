@@ -26,7 +26,7 @@ def respond(message, chat_history):
 # --- Gradio UI ---
 with gr.Blocks(title="FRIDAY AI") as demo:
     gr.Markdown("# FRIDAY AI - AXION XITERS")
-    chatbot = gr.Chatbot(
+    chatbot = gr.Chatbot(height=400)
         label="Chat", 
         type="messages",  # YE LINE SABSE IMPORTANT HAI
         height=500
