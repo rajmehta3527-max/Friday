@@ -30,7 +30,7 @@ body{background:#FDF8F6;font-family:-apple-system,sans-serif;display:flex;flex-d
 </style>
 </head>
 <body>
-<div class="header"><h2>LIA</h2><span>SUPER HYBRID</span></div>
+<div class="header"><h2>LIA</h2><span>BY RAJ MEHTA</span></div>
 <div id="chat"><div class="msg bot">Hey! I'm LIA made by Raj Mehta 🌐✨\n\nAsk me anything - weather, news, president, studies - sab live bataungi!</div></div>
 <div class="footer">
   <div class="input-row"><input id="inp" type="text" placeholder="Ask anything..." autocomplete="off"/><button onclick="send()">Send</button></div>
@@ -41,75 +41,77 @@ const chat=document.getElementById('chat');
 function add(t,c,isHtml=false){ const d=document.createElement('div'); d.className='msg '+c; if(isHtml) d.innerHTML=t; else d.innerText=t; chat.appendChild(d); chat.scrollTop=chat.scrollHeight; return d; }
 async function send(){
  let i=document.getElementById('inp'); let m=i.value.trim(); if(!m) return; add(m,'user'); i.value='';
- let l=add('Searching live...','bot');
+ let l=add('Thinking...','bot');
  try{
   let r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:m})});
   let j=await r.json(); l.innerHTML=j.reply;
- }catch{ l.innerText='Error'; }
+ }catch{ l.innerText='Server Error'; }
 }
 document.getElementById('inp').addEventListener('keypress',e=>{ if(e.key==='Enter') send(); });
 </script>
 </body></html>
 """
 
-# Fixed identity - only this
 DEV_INFO = "I'm LIA made by Raj Mehta"
 
-def is_about_dev(q):
-    return any(k in q.lower() for k in ["who made you","your developer","who are you","your name","who created you","who is raj"])
+def is_about_dev(q): return any(k in q.lower() for k in ["who made you","who are you","your name","who created you"])
 
 def needs_internet(q):
-    q = q.lower()
-    vast_keywords = ["president","prime minister","weather","mausam","temperature","news","latest","today","current","price","score","ipl","cricket","election","who is","what is","2025","2026","trump","biden","modi"]
-    return any(k in q for k in vast_keywords) or "?" in q
+    q=q.lower()
+    return any(k in q for k in ["president","weather","mausam","news","today","price","score","who is","what is","2025","2026","trump"])
 
-def get_weather(city="auto"):
+def get_weather(city=""):
     try:
-        city_clean = city.replace("weather","").replace("mausam","").replace("ka","").strip()
-        if not city_clean or city_clean.lower() in ["weather","mausam"]: city_clean = ""
-        j_url = f"https://wttr.in/{quote(city_clean)}?format=j1"
-        j = requests.get(j_url, timeout=7).json()
-        curr = j['current_condition'][0]
-        area = j['nearest_area'][0]['areaName'][0]['value']
-        return f"Live Weather for {area}: {curr['weatherDesc'][0]['value']}, Temp: {curr['temp_C']}°C (Feels like {curr['FeelsLikeC']}°C), Humidity: {curr['humidity']}%"
+        city_clean = city.replace("weather","").replace("mausam","").strip()
+        if city_clean.lower() in ["weather","mausam",""]: city_clean=""
+        j = requests.get(f"https://wttr.in/{quote(city_clean)}?format=j1", timeout=7).json()
+        curr=j['current_condition'][0]; area=j['nearest_area'][0]['areaName'][0]['value']
+        return f"Live Weather for {area}: {curr['weatherDesc'][0]['value']}, {curr['temp_C']}°C, Humidity {curr['humidity']}%"
     except: return None
 
 def search_web(query):
     try:
-        url = f"https://api.duckduckgo.com/?q={quote(query)}&format=json&no_html=1"
-        r = requests.get(url, timeout=7)
-        data = r.json()
-        result = ""
-        if data.get("AbstractText"): result += data["AbstractText"] + " "
-        if data.get("RelatedTopics"):
-            for t in data["RelatedTopics"][:3]:
-                if isinstance(t, dict) and "Text" in t: result += t["Text"] + " "
-        if not result.strip():
-            w = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(query)}", timeout=5)
-            if w.status_code==200: result = w.json().get("extract","")
-        return result[:2000] if result else None
+        r=requests.get(f"https://api.duckduckgo.com/?q={quote(query)}&format=json&no_html=1", timeout=7).json()
+        txt=r.get("AbstractText","")
+        if not txt and r.get("RelatedTopics"):
+            for t in r["RelatedTopics"][:2]:
+                if isinstance(t,dict) and t.get("Text"): txt+=t["Text"]+" "
+        if not txt:
+            w=requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(query)}", timeout=5)
+            if w.status_code==200: txt=w.json().get("extract","")
+        return txt[:2000] if txt else None
     except: return None
 
 def get_lia_answer(prompt, web_context=None, is_weather=False):
-    if not GROQ_API_KEY: return "GROQ_API_KEY not set"
+    if not GROQ_API_KEY:
+        return "ERROR: GROQ_API_KEY not set in Render. Go to Render > Environment > Add GROQ_API_KEY"
 
-    system = "You are LIA. Your identity is: I'm LIA made by Raj Mehta. You were made by Raj Mehta. Never say you are Meta AI or Llama. If someone asks who made you, always say: I'm LIA made by Raj Mehta. You are helpful, friendly, concise."
+    system = "You are LIA. Identity: I'm LIA made by Raj Mehta. Never say Meta AI or Llama. If asked who made you, say I'm LIA made by Raj Mehta. Friendly, concise."
+    if is_weather: system+=f" LIVE weather: {web_context}"
+    elif web_context: system+=f" LIVE data: {web_context}. Current US President is Donald Trump (47th)."
 
-    if is_weather:
-        system += f"\nLIVE weather data: {web_context}. Present nicely with emojis."
-    elif web_context:
-        system += f"\nLIVE internet data (2026): {web_context}. Use this. Current US President is Donald Trump (47th)."
+    # FIXED - Latest working Groq models 2026
+    MODELS = ["llama-3.1-8b-instant","llama-3.3-70b-versatile","gemma2-9b-it","openai/gpt-oss-20b","openai/gpt-oss-120b"]
 
-    MODELS = ["llama-3.3-70b-versatile","llama3-8b-8192","gemma2-9b-it"]
+    last_error="Unknown"
     for model in MODELS:
         try:
-            r=requests.post("https://api.groq.com/openai/v1/chat/completions",
+            resp=requests.post("https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
                 json={"model":model,"messages":[{"role":"system","content":system},{"role":"user","content":prompt}],"temperature":0.6},
-                timeout=25)
-            if r.status_code==200: return r.json()['choices'][0]['message']['content']
-        except: continue
-    return "Try again, Groq busy"
+                timeout=20)
+            if resp.status_code==200:
+                return resp.json()['choices'][0]['message']['content']
+            else:
+                last_error=f"{model} -> {resp.status_code}: {resp.text[:200]}"
+                print(last_error)
+                if resp.status_code==401: return "ERROR: API Key galat hai. Groq me new key banao aur Render pe update karo."
+                if resp.status_code==429: continue # rate limit, try next model
+        except Exception as e:
+            last_error=str(e)
+            continue
+
+    return f"Groq Error: {last_error}. Check API key in Render."
 
 @app.route('/')
 def home(): return HTML
@@ -117,19 +119,18 @@ def home(): return HTML
 @app.route('/chat', methods=['POST'])
 def chat_api():
     m=request.json.get('message','').strip()
-    if not m: return jsonify({"reply":"Ask something..."})
+    if not m: return jsonify({"reply":"Ask something"})
     if is_about_dev(m): return jsonify({"reply":DEV_INFO})
 
-    q_low = m.lower()
-    if "weather" in q_low or "mausam" in q_low:
-        wd = get_weather(m)
+    if "weather" in m.lower() or "mausam" in m.lower():
+        wd=get_weather(m)
         if wd:
-            ans = get_lia_answer(m, wd, is_weather=True)
-            return jsonify({"reply": f"<span class='badge weather'>🌦️ LIVE WEATHER</span><br>{ans.replace(chr(10),'<br>')}"})
+            ans=get_lia_answer(m,wd,True)
+            return jsonify({"reply": f"<span class='badge weather'>🌦️ LIVE WEATHER</span><br>{ans}"})
 
-    web_data = search_web(m) if needs_internet(m) else None
-    badge = "<span class='badge live'>🌐 LIVE</span><br>" if web_data else ""
-    ans = get_lia_answer(m, web_data)
+    web_data=search_web(m) if needs_internet(m) else None
+    badge="<span class='badge live'>🌐 LIVE</span><br>" if web_data else ""
+    ans=get_lia_answer(m,web_data)
     return jsonify({"reply": badge + re.sub(r'\*\*','',ans).replace("\n","<br>")})
 
 if __name__=='__main__':
